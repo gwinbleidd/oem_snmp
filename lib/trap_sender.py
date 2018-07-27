@@ -11,6 +11,21 @@ from event_logger import log_event
 from emcli import Emcli
 
 
+def filter_trap(**kwargs):
+    with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, 'config',
+                           'filter.json'), 'r') as json_file:
+        filters = json.load(json_file, encoding='ascii')
+        for filter_key, filter_value in filters.iteritems():
+            if filter_key in kwargs and kwargs[filter_key] is not None:
+                for value in filter_value:
+                    regexp = re.compile(value.encode('ascii'))
+                    match_object = regexp.search(kwargs[filter_key])
+                    if match_object:
+                        return True
+
+    return False
+
+
 def send_trap(environment):
     # Выставляем признак неотправки трапа
     do_not_send_trap = False
@@ -71,17 +86,70 @@ def send_trap(environment):
         # Если есть, трап по инциденту или проблеме отправлять не нужно
         emcli = Emcli()
         result = emcli.get_event_id(oms_event['oraEMNGEventSequenceId'], oms_event['oraEMNGEventSeverity'])
-        if len(result) == 1:
+        if result is not None and len(result) == 1:
             do_not_send_trap = True
 
             # Если пришла закрывашка, а само событие закрылось без отправки сообщения,
             # нужно отправить трап, подменив SequenceID на аналогичный параметр события
             if oms_event['oraEMNGEventSeverity'] == 'Clear':
-                if not emcli.check_message_sent(oms_event['oraEMNGEventSequenceId'], oms_event['oraEMNGEventSeverity']):
+                if not emcli.check_message_sent(oms_event['oraEMNGEventSequenceId'],
+                                                oms_event['oraEMNGEventSeverity']):
                     result = emcli.get_event_id(oms_event['oraEMNGEventSequenceId'])
                     if len(result) == 1:
                         oms_event['oraEMNGEventSequenceId'] = result[0]
                         do_not_send_trap = False
+        else:
+            do_not_send_trap = False
+
+    # Если не стоит признак не посылать трап,
+    if not do_not_send_trap:
+        # Проверяем, нужно ли фильтровать трап
+        # Если да - отсылать не будем
+        if not filter_trap(message=environment['MESSAGE'] if 'MESSAGE' in environment else None,
+                           event_name=environment['EVENT_NAME'] if 'EVENT_NAME' in environment else None):
+            oms_event.update({'TrapState': 'send'})
+            # Собираем трап
+            # Для этого нужен MIB (Management Information Base)
+            # # Есть проблема, Питон не хочет подхватывать напрямую MIB-файл из OMS,
+            # # который лежит $OMS_HOME/network/doc/omstrap.v1. Кроме того, в дефолтном файле
+            # # слишком много ненужной (устаревшей) информации. Поэтому мы удалили все OIDы oraEM4Alert,
+            # # кроме тех которые необходимы для копиляции. После этого скомпилировали полученный MIB
+            # # скриптом mibdump.py, который идет в поставке с пакетом pysmi, который ставиться pip'ом
+            # # и положил полученный *.py файл в /usr/lib/python2.7/site-packages/pysnmp/smi/mibs с правами 644
+
+            address = socket.gethostbyname(hostname)
+
+            # Собираем переменные трапа
+            trap_variables = [(ObjectIdentity('DISMAN-EVENT-MIB', 'sysUpTimeInstance'), TimeTicks(int(time.time()))),
+                              (ObjectIdentity('SNMP-COMMUNITY-MIB', 'snmpTrapAddress', 0), address)]
+
+            for trap_variable in trap_parameters:
+                trap_variables.append((ObjectIdentity('ORACLE-ENTERPRISE-MANAGER-4-MIB', trap_variable),
+                                       oms_event[trap_variable] if trap_variable in oms_event else ''))
+
+            # Посылаем трап
+            try:
+                errorindication, errorstatus, errorindex, varbinds = next(
+                    sendNotification(
+                        SnmpEngine(),
+                        CommunityData('public', mpModel=0),
+                        UdpTransportTarget(('10.120.47.136', 162)),
+                        ContextData(),
+                        'trap',
+                        NotificationType(
+                            ObjectIdentity('ORACLE-ENTERPRISE-MANAGER-4-MIB', 'oraEMNGEvent')
+                        ).addVarBinds(*trap_variables)
+                    )
+                )
+
+                if errorindication:
+                    raise Exception(errorindication)
+            except Exception as e:
+                raise e
+        else:
+            oms_event.update({'TrapState': 'filtered'})
+    else:
+        oms_event.update({'TrapState': 'skipped'})
 
     # Складывает полученные параметры окружения в виде json'а в файл, чтобы была возможность анализа при необходимости
     # Пишем в каталог логов ../log
@@ -89,47 +157,6 @@ def send_trap(environment):
     # Если непустой, читаем, добавляем еще один узел в json и перезаписывам
 
     log_event(oms_event_to_log=oms_event)
-
-    # Если не стоит признак не посылать трап,
-    if not do_not_send_trap:
-        # Собираем трап
-        # Для этого нужен MIB (Management Information Base)
-        # # Есть проблема, Питон не хочет подхватывать напрямую MIB-файл из OMS,
-        # # который лежит $OMS_HOME/network/doc/omstrap.v1. Кроме того, в дефолтном файле
-        # # слишком много ненужной (устаревшей) информации. Поэтому мы удалили все OIDы oraEM4Alert,
-        # # кроме тех которые необходимы для копиляции. После этого скомпилировали полученный MIB
-        # # скриптом mibdump.py, который идет в поставке с пакетом pysmi, который ставиться pip'ом
-        # # и положил полученный *.py файл в /usr/lib/python2.7/site-packages/pysnmp/smi/mibs с правами 644
-
-        address = socket.gethostbyname(hostname)
-
-        # Собираем переменные трапа
-        trap_variables = [(ObjectIdentity('DISMAN-EVENT-MIB', 'sysUpTimeInstance'), TimeTicks(int(time.time()))),
-                          (ObjectIdentity('SNMP-COMMUNITY-MIB', 'snmpTrapAddress', 0), address)]
-
-        for trap_variable in trap_parameters:
-            trap_variables.append((ObjectIdentity('ORACLE-ENTERPRISE-MANAGER-4-MIB', trap_variable),
-                                   oms_event[trap_variable] if trap_variable in oms_event else ''))
-
-        # Посылаем трап
-        try:
-            errorindication, errorstatus, errorindex, varbinds = next(
-                sendNotification(
-                    SnmpEngine(),
-                    CommunityData('public', mpModel=0),
-                    UdpTransportTarget(('10.120.47.136', 162)),
-                    ContextData(),
-                    'trap',
-                    NotificationType(
-                        ObjectIdentity('ORACLE-ENTERPRISE-MANAGER-4-MIB', 'oraEMNGEvent')
-                    ).addVarBinds(*trap_variables)
-                )
-            )
-
-            if errorindication:
-                raise Exception(errorindication)
-        except Exception as e:
-            raise e
 
     # Возвращаем полученный SequenceID
     return oms_event['oraEMNGEventSequenceId']

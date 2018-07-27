@@ -1,0 +1,11 @@
+{
+  "event_name": [
+    "alertLogStatus:genericErrors"
+  ],
+  "message": [
+    "ADFC-00032",
+    "EM-00158",
+    "DFW-99999",
+    "DFW-99998"
+  ]
+}
