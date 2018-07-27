@@ -1,0 +1,179 @@
+{
+  "trap_to_environment_variables": {
+    "oraEMNGAssocIncidentAckDetails": "ASSOC_INCIDENT_ACKNOWLEDGED_DETAILS",
+    "oraEMNGAssocIncidentAcked": {
+      "1": "ASSOC_INCIDENT_ACKNOWLEDGED_BY_OWNER",
+      "2": "INCIDENT_ACKNOWLEDGED_BY_OWNER",
+      "3": "PROBLEM_ACKNOWLEDGED_BY_OWNER"
+    },
+    "oraEMNGAssocIncidentEscLevel": {
+      "1": "ASSOC_INCIDENT_ESCALATION_LEVEL",
+      "2": "ESCALATED_LEVEL",
+      "3": "ESCALATED_LEVEL"
+    },
+    "oraEMNGAssocIncidentId": {
+      "1": "ASSOC_INCIDENT_ID",
+      "2": "INCIDENT_ID",
+      "3": "PROBLEM_ID"
+    },
+    "oraEMNGAssocIncidentOwner": {
+      "1": "ASSOC_INCIDENT_OWNER",
+      "2": "INCIDENT_OWNER",
+      "3": "PROBLEM_OWNER"
+    },
+    "oraEMNGAssocIncidentPriority": "ASSOC_INCIDENT_PRIORITY",
+    "oraEMNGAssocIncidentStatus": {
+      "1": "ASSOC_INCIDENT_STATUS",
+      "2": "INCIDENT_STATUS",
+      "3": "PROBLEM_STATUS"
+    },
+    "oraEMNGEventCAJobStatus": "CA_JOB_STATUS",
+    "oraEMNGEventCategories": "CATEGORY_1",
+    "oraEMNGEventCategoryCodes": "CATEGORY_CODE_1",
+    "oraEMNGEventContextAttrs": "EVENT_CONTEXT_ATTRS",
+    "oraEMNGEventHostName": {
+      "1": "HOST_NAME",
+      "2": "EVENT_SOURCE_1_HOST_NAME",
+      "3": "EVENT_SOURCE_1_HOST_NAME"
+    },
+    "oraEMNGEventLastUpdatedTime": "LAST_UPDATED_TIME",
+    "oraEMNGEventMessage": "MESSAGE",
+    "oraEMNGEventMessageURL": "MESSAGE_URL",
+    "oraEMNGEventName": "EVENT_NAME",
+    "oraEMNGEventNotifType": "NOTIF_TYPE",
+    "oraEMNGEventOccurrenceTime": "EVENT_OCCURRENCE_TIME",
+    "oraEMNGEventRepeatCount": "REPEAT_COUNT",
+    "oraEMNGEventReportedTime": {
+      "1": "EVENT_REPORTED_TIME",
+      "2": "INCIDENT_CREATION_TIME",
+      "3": "PROBLEM_CREATION_TIME"
+    },
+    "oraEMNGEventRuleName": "RULE_NAME",
+    "oraEMNGEventRuleOwner": "RULE_OWNER",
+    "oraEMNGEventRuleSetName": "RULESET_NAME",
+    "oraEMNGEventSequenceId": "SEQUENCE_ID",
+    "oraEMNGEventSeverity": "SEVERITY",
+    "oraEMNGEventSeverityCode": "SEVERITY_CODE",
+    "oraEMNGEventSourceObjName": "SOURCE_OBJ_NAME",
+    "oraEMNGEventSourceObjOwner": "SOURCE_OBJ_OWNER",
+    "oraEMNGEventSourceObjType": "SOURCE_OBJ_TYPE",
+    "oraEMNGEventTargetGUID": {
+      "1": "",
+      "2": "EVENT_SOURCE_1_TARGET_GUID",
+      "3": "EVENT_SOURCE_1_TARGET_GUID"
+    },
+    "oraEMNGEventTargetName": {
+      "1": "TARGET_NAME",
+      "2": "EVENT_SOURCE_1_TARGET_NAME",
+      "3": "EVENT_SOURCE_1_TARGET_NAME"
+    },
+    "oraEMNGEventTargetNameURL": {
+      "1": "TARGET_URL",
+      "2": "EVENT_SOURCE_1_TARGET_URL",
+      "3": "EVENT_SOURCE_1_TARGET_URL"
+    },
+    "oraEMNGEventTargetOwner": {
+      "1": "TARGET_OWNER",
+      "2": "EVENT_SOURCE_1_TARGET_OWNER",
+      "3": "EVENT_SOURCE_1_TARGET_OWNER"
+    },
+    "oraEMNGEventTargetType": {
+      "1": "TARGET_TYPE",
+      "2": "EVENT_SOURCE_1_TARGET_TYPE",
+      "3": "EVENT_SOURCE_1_TARGET_TYPE"
+    },
+    "oraEMNGEventTargetVersion": {
+      "1": "TARGET_VERSION",
+      "2": "EVENT_SOURCE_1_TARGET_VERSION",
+      "3": "EVENT_SOURCE_1_TARGET_VERSION"
+    },
+    "oraEMNGEventTgtLifeCycleStatus": {
+      "1": "TARGET_LIFECYCLE_STATUS",
+      "2": "EVENT_SOURCE_1_TARGET_LIFECYCLE_STATUS",
+      "3": "EVENT_SOURCE_1_TARGET_LIFECYCLE_STATUS"
+    },
+    "oraEMNGEventTotalOccurrenceCount": "TOTAL_OCCURRENCE_COUNT",
+    "oraEMNGEventType": "EVENT_TYPE",
+    "oraEMNGEventUserDefinedTgtProp": "USER_DEFINED_TARGET_PROP",
+    "oraEMNGIssueType": "ISSUE_TYPE"
+  },
+  "trap_parameters": [
+    "oraEMNGAssocIncidentAcked",
+    "oraEMNGAssocIncidentEscLevel",
+    "oraEMNGAssocIncidentId",
+    "oraEMNGAssocIncidentOwner",
+    "oraEMNGAssocIncidentPriority",
+    "oraEMNGAssocIncidentStatus",
+    "oraEMNGEventActionMsg",
+    "oraEMNGEventCAJobName",
+    "oraEMNGEventCAJobOwner",
+    "oraEMNGEventCAJobStatus",
+    "oraEMNGEventCAJobStepOutput",
+    "oraEMNGEventCAJobType",
+    "oraEMNGEventCategories",
+    "oraEMNGEventCategoryCodes",
+    "oraEMNGEventContextAttrs",
+    "oraEMNGEventCurrFirstOccurDate",
+    "oraEMNGEventCurrLastOccurDate",
+    "oraEMNGEventCurrOccurrenceCount",
+    "oraEMNGEventHostName",
+    "oraEMNGEventMessage",
+    "oraEMNGEventMessageURL",
+    "oraEMNGEventName",
+    "oraEMNGEventNotifType",
+    "oraEMNGEventOccurrenceTime",
+    "oraEMNGEventRCADetails",
+    "oraEMNGEventRCAStatus",
+    "oraEMNGEventRepeatCount",
+    "oraEMNGEventReportedState",
+    "oraEMNGEventReportedTime",
+    "oraEMNGEventRuleName",
+    "oraEMNGEventRuleOwner",
+    "oraEMNGEventRuleSetName",
+    "oraEMNGEventSequenceId",
+    "oraEMNGEventSeverity",
+    "oraEMNGEventSeverityCode",
+    "oraEMNGEventSourceObjName",
+    "oraEMNGEventSourceObjNameURL",
+    "oraEMNGEventSourceObjOwner",
+    "oraEMNGEventSourceObjSubType",
+    "oraEMNGEventSourceObjType",
+    "oraEMNGEventTargetName",
+    "oraEMNGEventTargetNameURL",
+    "oraEMNGEventTargetOwner",
+    "oraEMNGEventTargetType",
+    "oraEMNGEventTargetVersion",
+    "oraEMNGEventTgtLifeCycleStatus",
+    "oraEMNGEventTotalOccurrenceCount",
+    "oraEMNGEventType",
+    "oraEMNGEventTypeAttr1",
+    "oraEMNGEventTypeAttr10",
+    "oraEMNGEventTypeAttr11",
+    "oraEMNGEventTypeAttr12",
+    "oraEMNGEventTypeAttr13",
+    "oraEMNGEventTypeAttr14",
+    "oraEMNGEventTypeAttr15",
+    "oraEMNGEventTypeAttr16",
+    "oraEMNGEventTypeAttr17",
+    "oraEMNGEventTypeAttr18",
+    "oraEMNGEventTypeAttr19",
+    "oraEMNGEventTypeAttr2",
+    "oraEMNGEventTypeAttr20",
+    "oraEMNGEventTypeAttr21",
+    "oraEMNGEventTypeAttr22",
+    "oraEMNGEventTypeAttr23",
+    "oraEMNGEventTypeAttr24",
+    "oraEMNGEventTypeAttr25",
+    "oraEMNGEventTypeAttr3",
+    "oraEMNGEventTypeAttr4",
+    "oraEMNGEventTypeAttr5",
+    "oraEMNGEventTypeAttr6",
+    "oraEMNGEventTypeAttr7",
+    "oraEMNGEventTypeAttr8",
+    "oraEMNGEventTypeAttr9",
+    "oraEMNGEventUpdates",
+    "oraEMNGEventUserComments",
+    "oraEMNGEventUserDefinedTgtProp"
+  ],
+  "hostname": "oem-vm.severstal.severstalgroup.com"
+}
