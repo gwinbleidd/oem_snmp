@@ -109,27 +109,27 @@ def send_trap(environment):
 
         for trap_variable in trap_parameters:
             trap_variables.append((ObjectIdentity('ORACLE-ENTERPRISE-MANAGER-4-MIB', trap_variable),
-                               oms_event[trap_variable] if trap_variable in oms_event else ''))
+                                   oms_event[trap_variable] if trap_variable in oms_event else ''))
 
-            # Посылаем трап
-            try:
-                errorindication, errorstatus, errorindex, varbinds = next(
-                    sendNotification(
-                        SnmpEngine(),
-                        CommunityData('public', mpModel=0),
-                        UdpTransportTarget(('10.120.47.136', 162)),
-                        ContextData(),
-                        'trap',
-                        NotificationType(
-                            ObjectIdentity('ORACLE-ENTERPRISE-MANAGER-4-MIB', 'oraEMNGEvent')
-                        ).addVarBinds(*trap_variables)
-                    )
+        # Посылаем трап
+        try:
+            errorindication, errorstatus, errorindex, varbinds = next(
+                sendNotification(
+                    SnmpEngine(),
+                    CommunityData('public', mpModel=0),
+                    UdpTransportTarget(('10.120.47.136', 162)),
+                    ContextData(),
+                    'trap',
+                    NotificationType(
+                        ObjectIdentity('ORACLE-ENTERPRISE-MANAGER-4-MIB', 'oraEMNGEvent')
+                    ).addVarBinds(*trap_variables)
                 )
+            )
 
-                if errorindication:
-                    raise Exception(errorindication)
-            except Exception as e:
-                raise e
+            if errorindication:
+                raise Exception(errorindication)
+        except Exception as e:
+            raise e
 
     # Возвращаем полученный SequenceID
     return oms_event['oraEMNGEventSequenceId']
