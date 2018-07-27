@@ -170,9 +170,12 @@ class Emcli:
         return None
 
     def check_message_sent(self, *args):
-        query = 'SELECT COUNT(*) FROM SYSMAN.MGMT$EVENTS E JOIN SYSMAN.MGMT$ALERT_HISTORY A \
-                     ON E.EVENT_ID = A.EVENT_INSTANCE_ID WHERE E.INCIDENT_ID = \
-                     HEXTORAW (\'%s\') AND E.SEVERITY = \'%s\'' % (args[0], args[1])
+        query = """SELECT COUNT (*)\
+                   FROM   SYSMAN.MGMT$EVENTS  E\
+                   JOIN SYSMAN.MGMT$ALERT_HISTORY A ON E.EVENT_ID = A.EVENT_INSTANCE_ID\
+                   JOIN SYSMAN.MGMT$ALERT_NOTIF_LOG ANL\
+                   ON A.VIOLATION_GUID = ANL.SOURCE_OBJ_GUID\
+                   WHERE E.INCIDENT_ID = HEXTORAW (\'%s\') AND E.SEVERITY = \'%s\'""" % (args[0], args[1])
         process = self.execute('list', '-sql=%s' % query, '-format=name:csv')
 
         for line in process:
