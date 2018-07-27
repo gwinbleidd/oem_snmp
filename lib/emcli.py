@@ -50,7 +50,7 @@ class Emcli:
     def execute(self, *args):
         params = list(args)
         params.insert(0, self.config['bin'].encode('ascii'))
-        process = subprocess.Popen(params, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        process = subprocess.Popen(params, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         return process.stdout.readlines()
 
     def __get_configured(self):
