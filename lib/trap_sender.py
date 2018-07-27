@@ -12,6 +12,15 @@ from emcli import Emcli
 
 
 def filter_trap(**kwargs):
+    # Фильтр входящих сообщений
+    # На вход функции подается некие параметры трапа
+    # На основе конфигурационного файла filter.json
+    # проверяется, пропускать ли этот трап или нет
+    # На настоящий момент проверяются только поля MESSAGE и EVENT_NAME
+    # В конфигурационном фале записи состоят из ключа - имени поля, которое проверяется
+    # и значения - массива регулярных выражений, которыми это поле проверяется.
+    # При совпадении хотя бы с одним из них функция возвращает признак
+    # неоходимости фильтрации сообщения
     with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, 'config',
                            'filter.json'), 'r') as json_file:
         filters = json.load(json_file, encoding='ascii')
@@ -129,7 +138,7 @@ def send_trap(environment):
 
             # Посылаем трап
             try:
-                errorindication, errorstatus, errorindex, varbinds = next(
+                error_indication, error_status, error_index, var_binds = next(
                     sendNotification(
                         SnmpEngine(),
                         CommunityData('public', mpModel=0),
@@ -142,8 +151,8 @@ def send_trap(environment):
                     )
                 )
 
-                if errorindication:
-                    raise Exception(errorindication)
+                if error_indication:
+                    raise Exception(error_indication)
             except Exception as e:
                 raise e
         else:
