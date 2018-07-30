@@ -20,7 +20,7 @@ with open(environment_file, 'r') as json_file:
 
 try:
     sequence_id = send_trap(environment)
-    logging.debug(sequence_id)
+    logging.info(sequence_id)
     print sequence_id
 except Exception as e:
     logging.error(e, exc_info=True)

@@ -97,6 +97,10 @@ def send_trap(environment):
         result = emcli.get_event_id(oms_event['oraEMNGEventSequenceId'], oms_event['oraEMNGEventSeverity'])
         if result is not None and len(result) == 1:
             do_not_send_trap = True
+            # Если пришел Acknowledged, трап посылаем с ID породившего события
+            if oms_event['oraEMNGAssocIncidentAcked'] == 'Yes':
+                oms_event['oraEMNGEventSequenceId'] = result[0]
+                do_not_send_trap = False
 
             # Если пришла закрывашка, а само событие закрылось без отправки сообщения,
             # нужно отправить трап, подменив SequenceID на аналогичный параметр события

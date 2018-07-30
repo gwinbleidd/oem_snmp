@@ -16,7 +16,7 @@ environment = dict(os.environ)
 
 try:
     sequence_id = send_trap(environment)
-    logging.debug(sequence_id)
+    logging.info(sequence_id)
 except Exception as e:
     logging.error(e, exc_info=True)
     sys.exit(1)
