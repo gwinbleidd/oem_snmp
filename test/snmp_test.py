@@ -4,7 +4,6 @@
 import logging
 import sys
 import os
-import json
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, 'lib'))
 
 from trap_sender import *

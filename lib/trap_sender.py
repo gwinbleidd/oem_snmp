@@ -6,6 +6,7 @@ import re
 import time
 import os
 import json
+import time
 
 from event_logger import log_event
 from emcli import Emcli
@@ -85,33 +86,41 @@ def send_trap(environment):
                       'oraEMNGEventMessageURL': oms_event['oraEMNGEventMessageURL'][:255],
                       'oraEMNGEventContextAttrs': oms_event['oraEMNGEventContextAttrs'][:255]})
 
-    # Во-вторых, для инцидентов и проблем не передается в переменную SequenceID, но его можно взять из поля MESSAGE_URL
+    # Во-вторых, для инцидентов и проблем не передается в переменную SequenceID
+    # Будем брать его из SequenceID породившего события
     if oms_event['oraEMNGIssueType'] in ('2', '3'):
         oms_event.update(
-            {'oraEMNGEventSequenceId': re.search('&issueID=([ABCDEF|0-9]{32})$',
-                                                 environment['MESSAGE_URL']).group(1)})
+            {'oraEMNGEventIssueId': re.search('&issueID=([ABCDEF|0-9]{32})$',
+                                              environment['MESSAGE_URL']).group(1)})
+
+        emcli = Emcli()
+        event_id = emcli.get_event_id(oms_event['oraEMNGEventIssueId'], oms_event['oraEMNGEventSeverity'])
+        if len(event_id) != 0 and event_id is not None:
+            oms_event.update({'oraEMNGEventSequenceId': event_id[0]})
+        else:
+            oms_event.update({'oraEMNGEventSequenceId': oms_event['oraEMNGEventIssueId']})
 
         # В-третьих, нужно проверить, есть ли событие с таким же уровнем severity
+        # и отправлялось ли по нему сообщение
         # Если есть, трап по инциденту или проблеме отправлять не нужно
-        emcli = Emcli()
-        result = emcli.get_event_id(oms_event['oraEMNGEventSequenceId'], oms_event['oraEMNGEventSeverity'])
-        if result is not None and len(result) == 1:
+        message_sent = emcli.check_message_sent(oms_event['oraEMNGEventIssueId'],
+                                                oms_event['oraEMNGEventSeverity'])
+
+        # Подождем 2 секунды, возможно сообщение по событию запаздывает
+        if not message_sent:
+            time.sleep(2)
+            message_sent = emcli.check_message_sent(oms_event['oraEMNGEventIssueId'],
+                                                    oms_event['oraEMNGEventSeverity'])
+
+        if message_sent:
             do_not_send_trap = True
             # Если пришел Acknowledged, трап посылаем с ID породившего события
             if oms_event['oraEMNGAssocIncidentAcked'] == 'Yes':
-                oms_event['oraEMNGEventSequenceId'] = result[0]
                 do_not_send_trap = False
 
-            # Если пришла закрывашка, а само событие закрылось без отправки сообщения,
-            # нужно отправить трап, подменив SequenceID на аналогичный параметр события
-            if oms_event['oraEMNGEventSeverity'] == 'Clear':
-                if not emcli.check_message_sent(oms_event['oraEMNGEventSequenceId'],
-                                                oms_event['oraEMNGEventSeverity']):
-                    result = emcli.get_event_id(oms_event['oraEMNGEventSequenceId'])
-                    if len(result) == 1:
-                        oms_event['oraEMNGEventSequenceId'] = result[0]
-                        do_not_send_trap = False
-        else:
+        # Если пришла закрывашка, а само событие закрылось без отправки сообщения,
+        # нужно отправить трап, подменив SequenceID на аналогичный параметр события
+        if oms_event['oraEMNGEventSeverity'] == 'Clear' and not message_sent:
             do_not_send_trap = False
 
     # Если не стоит признак не посылать трап,
@@ -120,8 +129,7 @@ def send_trap(environment):
         # Если да - отсылать не будем
         if not filter_trap(message=environment['MESSAGE'] if 'MESSAGE' in environment else None,
                            event_name=environment['EVENT_NAME'] if 'EVENT_NAME' in environment else None):
-            oms_event.update({'TrapState': 'send'})
-            # Собираем трап
+            # Собираем SNMP трап
             # Для этого нужен MIB (Management Information Base)
             # # Есть проблема, Питон не хочет подхватывать напрямую MIB-файл из OMS,
             # # который лежит $OMS_HOME/network/doc/omstrap.v1. Кроме того, в дефолтном файле
@@ -156,8 +164,13 @@ def send_trap(environment):
                 )
 
                 if error_indication:
+                    oms_event.update({'TrapState': 'exception'})
+                    log_event(oms_event_to_log=oms_event)
                     raise Exception(error_indication)
+                else:
+                    oms_event.update({'TrapState': 'send'})
             except Exception as e:
+                log_event(oms_event_to_log=oms_event)
                 raise e
         else:
             oms_event.update({'TrapState': 'filtered'})
