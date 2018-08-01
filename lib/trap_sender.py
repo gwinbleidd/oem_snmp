@@ -7,6 +7,8 @@ import re
 import os
 import json
 import time
+import logging
+import psutil
 
 from event_logger import log_event
 from emcli import Emcli
@@ -38,6 +40,7 @@ def filter_trap(**kwargs):
 
 def send_trap(environment):
     # Выставляем признак неотправки трапа
+
     do_not_send_trap = False
 
     # Загружаем конфиг
@@ -147,7 +150,8 @@ def send_trap(environment):
 
             for trap_variable in trap_parameters:
                 trap_variables.append((ObjectIdentity('ORACLE-ENTERPRISE-MANAGER-4-MIB', trap_variable),
-                                       oms_event[trap_variable].replace('"', "'") if trap_variable in oms_event else ''))
+                                       oms_event[trap_variable].replace('"',
+                                                                        "'") if trap_variable in oms_event else ''))
 
             # Посылаем трап
             try:
@@ -175,19 +179,70 @@ def send_trap(environment):
                 raise e
 
             # Собираем Zabbix трап
+            # Разбираемся с лок-файлом
+            # Нужно запомнить ИД процесса
+            pid = os.getpid()
+
+            # Лок-файл лежит в папке .secure
+            lock_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, '.secure', '.lock')
+            if os.path.isfile(lock_file):
+                # Если такой файл есть, дописываем в него ИД процесса
+                with open(lock_file, 'a+') as lock:
+                    lock.write(str(pid) + '\n')
+            else:
+                # Если нет - создаем и записываем
+                with open(lock_file, 'w+') as lock:
+                    lock.write(str(pid) + '\n')
+
+            logging.info('Sent PID %d to lock file' % pid)
+
             # Собираем переменные трапа
             trap_variables = dict()
 
             for trap_variable in trap_parameters:
                 if trap_variable in oms_event:
-                    trap_variables.update({trap_variable.encode('ascii').replace('oraEMNG', '').replace('Event', ''):
-                                               oms_event[trap_variable].encode('ascii')})
+                    trap_variables.update({trap_variable.encode('ascii'): oms_event[trap_variable].encode('ascii')})
 
             # Формируем метрику
             try:
                 m = ZabbixMetric(oms_event['oraEMNGEventHostName'], 'data',
                                  json.dumps(trap_variables, indent=3, sort_keys=True))
                 zbx = ZabbixSender(zabbix['host'])
+
+                # Проверяем, что наша очередь работать
+                # Для этого ИД нашего процесса должен стоять первым в списке
+                processes = list()
+                counter = 0
+                with open(lock_file, 'r') as lock:
+                    for line in lock:
+                        if line.replace('\n', '').strip() != '' and psutil.pid_exists(
+                                int(line.replace('\n', '').strip())):
+                            processes.append(line.replace('\n', '').strip())
+
+                # Если не первый - ждем своей очереди
+                if processes[0] != str(pid):
+                    logging.info('First PID is %s. It\'s not equal ours, sleeping' % processes[0])
+                    logging.info('Process queue is [%s]. ' % ', '.join(processes))
+
+                while processes[0] != str(pid) and counter < 5:
+                    # Ждем 0.1 секунду
+                    time.sleep(0.1)
+                    # Но не более 5 раз
+                    counter += 1
+                    processes = list()
+                    with open(lock_file, 'r') as lock:
+                        for line in lock:
+                            if line.replace('\n', '').strip() != '' and psutil.pid_exists(
+                                    int(line.replace('\n', '').strip())):
+                                processes.append(line.replace('\n', '').strip())
+                    logging.info('Process queue is [%s]. ' % ', '.join(processes))
+
+                # Наша очередь, поехали
+                if counter == 5:
+                    logging.info('Enough waiting, running')
+                else:
+                    logging.info('First PID is ours, running')
+
                 # Отправляем
                 response = zbx.send([m])
 
@@ -200,6 +255,29 @@ def send_trap(environment):
             except Exception as e:
                 log_event(oms_event_to_log=oms_event)
                 raise e
+            finally:
+                # В конце концов, поработал - прибери за собой
+                # Удаляем из лок-файла свой ИД
+                # По логике, он должен быть первым в файле, но чем черт не шутит
+                # Поэтому считываем весь файл, а потом перезаписываем его всем его содержимым кроме строки с нашим ИД
+                processes = list()
+                with open(lock_file, 'r') as lock:
+                    for line in lock:
+                        if line.replace('\n', '').strip() != '' and psutil.pid_exists(
+                                int(line.replace('\n', '').strip())):
+                            processes.append(line.replace('\n', '').strip())
+
+                with open(lock_file, 'w') as lock:
+                    for line in processes:
+                        if line != str(pid):
+                            lock.write(line + '\n')
+
+                processes.remove(str(pid))
+
+                logging.info('Final process queue is [%s]. ' % ', '.join(processes))
+
+                if os.path.getsize(lock_file) == 0:
+                    os.remove(lock_file)
         else:
             oms_event.update({'TrapState': 'filtered'})
     else:
