@@ -175,5 +175,9 @@
     "oraEMNGEventUserComments",
     "oraEMNGEventUserDefinedTgtProp"
   ],
-  "hostname": "oem-vm.severstal.severstalgroup.com"
+  "hostname": "oem-vm.severstal.severstalgroup.com",
+  "zabbix": {
+    "host": "10.120.47.136",
+    "port": 162
+  }
 }
