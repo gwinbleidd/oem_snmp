@@ -8,6 +8,11 @@ def log_event(oms_event_to_log):
     log_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, 'log',
                             oms_event_to_log['oraEMNGEventSequenceId'] + '.json')
 
+    # Складывает полученные параметры окружения в виде json'а в файл, чтобы была возможность анализа при необходимости
+    # Пишем в каталог логов ../log
+    # Для того, чтобы получить валидный json, перед сохранением проверяем, пустой ли файл.
+    # Если непустой, читаем, добавляем еще один узел в json и перезаписывам
+
     if os.path.isfile(log_file) and os.path.getsize(log_file) > 0:
         # Если файл существует и непустой, считываем данные и добавляем новую информацию
         with open(log_file, 'r') as json_file:
