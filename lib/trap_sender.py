@@ -1,9 +1,9 @@
 # coding=utf-8
 
 from pysnmp.hlapi import *
+from pyzabbix import ZabbixMetric, ZabbixSender
 import socket
 import re
-import time
 import os
 import json
 import time
@@ -60,6 +60,7 @@ def send_trap(environment):
 
     # Имя хоста ОЕМ
     hostname = config['hostname']
+    zabbix = config['zabbix']
 
     # На вход получаем параметры окружения в виде словаря, которые создает OMS при вызове скрипта
     # Собираем только те параметры, которые укладываются в стандартный MIB omstrap.v1 Oracle OEM 13c
@@ -94,8 +95,8 @@ def send_trap(environment):
                                               environment['MESSAGE_URL']).group(1)})
 
         emcli = Emcli()
-        event_id = emcli.get_event_id(oms_event['oraEMNGEventIssueId'], oms_event['oraEMNGEventSeverity'])
-        if len(event_id) != 0 and event_id is not None:
+        event_id = emcli.get_event_id(oms_event['oraEMNGEventIssueId'])
+        if event_id is not None and len(event_id) != 0:
             oms_event.update({'oraEMNGEventSequenceId': event_id[0]})
         else:
             oms_event.update({'oraEMNGEventSequenceId': oms_event['oraEMNGEventIssueId']})
@@ -146,7 +147,7 @@ def send_trap(environment):
 
             for trap_variable in trap_parameters:
                 trap_variables.append((ObjectIdentity('ORACLE-ENTERPRISE-MANAGER-4-MIB', trap_variable),
-                                       oms_event[trap_variable] if trap_variable in oms_event else ''))
+                                       oms_event[trap_variable].replace('"', "'") if trap_variable in oms_event else ''))
 
             # Посылаем трап
             try:
@@ -154,7 +155,7 @@ def send_trap(environment):
                     sendNotification(
                         SnmpEngine(),
                         CommunityData('public', mpModel=0),
-                        UdpTransportTarget(('10.120.47.136', 162)),
+                        UdpTransportTarget((zabbix['host'], zabbix['port'])),
                         ContextData(),
                         'trap',
                         NotificationType(
@@ -168,7 +169,34 @@ def send_trap(environment):
                     log_event(oms_event_to_log=oms_event)
                     raise Exception(error_indication)
                 else:
-                    oms_event.update({'TrapState': 'send'})
+                    oms_event.update({'TrapState': 'send snmp'})
+            except Exception as e:
+                log_event(oms_event_to_log=oms_event)
+                raise e
+
+            # Собираем Zabbix трап
+            # Собираем переменные трапа
+            trap_variables = dict()
+
+            for trap_variable in trap_parameters:
+                if trap_variable in oms_event:
+                    trap_variables.update({trap_variable.encode('ascii').replace('oraEMNG', '').replace('Event', ''):
+                                               oms_event[trap_variable].encode('ascii')})
+
+            # Формируем метрику
+            try:
+                m = ZabbixMetric(oms_event['oraEMNGEventHostName'], 'data',
+                                 json.dumps(trap_variables, indent=3, sort_keys=True))
+                zbx = ZabbixSender(zabbix['host'])
+                # Отправляем
+                response = zbx.send([m])
+
+                if response is not None:
+                    if response.failed == 1:
+                        oms_event.update({'TrapState': oms_event['TrapState'] + ', exception zabbix'})
+                        # raise Exception('Zabbix trap not send')
+                    elif response.processed == 1:
+                        oms_event.update({'TrapState': oms_event['TrapState'] + ', send zabbix'})
             except Exception as e:
                 log_event(oms_event_to_log=oms_event)
                 raise e
@@ -176,11 +204,6 @@ def send_trap(environment):
             oms_event.update({'TrapState': 'filtered'})
     else:
         oms_event.update({'TrapState': 'skipped'})
-
-    # Складывает полученные параметры окружения в виде json'а в файл, чтобы была возможность анализа при необходимости
-    # Пишем в каталог логов ../log
-    # Для того, чтобы получить валидный json, перед сохранением проверяем, пустой ли файл.
-    # Если непустой, читаем, добавляем еще один узел в json и перезаписывам
 
     log_event(oms_event_to_log=oms_event)
 
