@@ -26,7 +26,7 @@ def filter_trap(**kwargs):
     # неоходимости фильтрации сообщения
     with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, 'config',
                            'filter.json'), 'r') as json_file:
-        filters = json.load(json_file, encoding='ascii')
+        filters = json.load(json_file)
         for filter_key, filter_value in filters.iteritems():
             if filter_key in kwargs and kwargs[filter_key] is not None:
                 for value in filter_value:
@@ -179,10 +179,13 @@ def send_trap(environment):
                 raise e
 
             # Собираем Zabbix трап
-            # Разбираемся с лок-файлом
+            # Чтобы не было одновременной отправки нескольких сообщений
+            # Добавляем функционал файла блокировок таким образом, чтобы
+            # все наши процессы по отправке заббикс трапов шли по очереди
             # Нужно запомнить ИД процесса
             pid = os.getpid()
 
+            # Разбираемся с лок-файлом
             # Лок-файл лежит в папке .secure
             lock_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, '.secure', '.lock')
             if os.path.isfile(lock_file):
@@ -205,6 +208,9 @@ def send_trap(environment):
 
             # Формируем метрику
             try:
+                # В качестве метрики берем тот же набор параметров,
+                # что и для SNMP трапа, но сваливаем его в json
+                # и в таком виде отправляем в Заббикс
                 m = ZabbixMetric(oms_event['oraEMNGEventHostName'], 'data',
                                  json.dumps(trap_variables, indent=3, sort_keys=True))
                 zbx = ZabbixSender(zabbix['host'])
@@ -225,8 +231,11 @@ def send_trap(environment):
                     logging.info('Process queue is [%s]. ' % ', '.join(processes))
 
                 while processes[0] != str(pid) and counter < 5:
-                    # Ждем 0.1 секунду
-                    time.sleep(0.1)
+                    # Ждем 1 секунду
+                    # Потому, что Заббикс не может разделить два пришедших события
+                    # если у них совпадает метка времени
+                    # А метка времени у него берется с точностью до секунды
+                    time.sleep(1)
                     # Но не более 5 раз
                     counter += 1
                     processes = list()
@@ -246,10 +255,11 @@ def send_trap(environment):
                 # Отправляем
                 response = zbx.send([m])
 
+                # Проверяем ответ
+                # Наша отправка не должна зафейлиться, но должна быть обработана
                 if response is not None:
                     if response.failed == 1:
                         oms_event.update({'TrapState': oms_event['TrapState'] + ', exception zabbix'})
-                        # raise Exception('Zabbix trap not send')
                     elif response.processed == 1:
                         oms_event.update({'TrapState': oms_event['TrapState'] + ', send zabbix'})
             except Exception as e:
