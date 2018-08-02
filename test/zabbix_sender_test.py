@@ -6,7 +6,7 @@ from pyzabbix import ZabbixMetric, ZabbixSender
 import logging
 import os
 
-LOG_FILENAME = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, 'log', 'application.log')
+LOG_FILENAME = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, 'log', 'test.log')
 logging.basicConfig(filename=LOG_FILENAME, level=logging.DEBUG,
                     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 

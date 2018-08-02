@@ -11,7 +11,7 @@ from trap_sender import *
 
 def main():
     # Основная процедура
-    log_filename = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, 'log', 'application.log')
+    log_filename = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, 'log', 'test.log')
     logging.basicConfig(filename=log_filename, level=logging.INFO,
                         format="%(asctime)s - %(process)d - %(levelname)s - %(message)s")
 
