@@ -12,6 +12,7 @@ import psutil
 
 from event_logger import log_event
 from emcli import Emcli
+from zabbix_api import *
 
 
 def filter_trap(**kwargs):
@@ -127,12 +128,32 @@ def send_trap(environment):
         if oms_event['oraEMNGEventSeverity'] == 'Clear' and not message_sent:
             do_not_send_trap = False
 
+    # Проверяем, нет ли случайно в Заббиксе события с таким же текстом
+    # отображаемого на экране дежурных
+    # Если есть - отсылать его не нужно
+    try:
+        do_not_send_trap = True if check_if_message_exists('%s: %s' % (oms_event['oraEMNGEventTargetName'], oms_event['oraEMNGEventMessage'])) else do_not_send_trap
+    except Exception as e:
+        log_event(oms_event_to_log=oms_event)
+        raise e
+
     # Если не стоит признак не посылать трап,
     if not do_not_send_trap:
         # Проверяем, нужно ли фильтровать трап
         # Если да - отсылать не будем
         if not filter_trap(message=environment['MESSAGE'] if 'MESSAGE' in environment else None,
                            event_name=environment['EVENT_NAME'] if 'EVENT_NAME' in environment else None):
+
+            # Для начала закроем событие в заббиксе с таким же ИД
+            # если таковой имеется
+            # но не трогаем закрывашки
+            try:
+                if not oms_event['oraEMNGEventSeverity'] == 'Clear' and not oms_event['oraEMNGAssocIncidentAcked'] == 'Yes':
+                    acknowledge_event_by_id(oms_event['oraEMNGEventSequenceId'])
+            except Exception as e:
+                log_event(oms_event_to_log=oms_event)
+                raise e
+
             # Собираем SNMP трап
             # Для этого нужен MIB (Management Information Base)
             # # Есть проблема, Питон не хочет подхватывать напрямую MIB-файл из OMS,
@@ -296,4 +317,4 @@ def send_trap(environment):
     log_event(oms_event_to_log=oms_event)
 
     # Возвращаем полученный SequenceID
-    return oms_event['oraEMNGEventSequenceId']
+    return '%s: %s' % (oms_event['oraEMNGEventSequenceId'], oms_event['TrapState'])
