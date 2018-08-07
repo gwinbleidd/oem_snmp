@@ -4,6 +4,7 @@ import json
 import re
 import datetime
 import hashlib
+import logging
 
 
 class Emcli:
@@ -48,6 +49,7 @@ class Emcli:
         return None
 
     def execute(self, *args):
+        logging.debug('Executing %s' % ', '.join(args))
         params = list(args)
         params.insert(0, self.config['bin'].encode('ascii'))
         process = subprocess.Popen(params, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -57,8 +59,10 @@ class Emcli:
         output = self.execute('status')
         for line in output:
             if re.match('^Status\s+: Configured$', line):
+                logging.debug('Emcli configured')
                 return True
 
+        logging.debug('Emcli not configured')
         return False
 
     def __get_logged_in(self):
@@ -73,14 +77,17 @@ class Emcli:
         self.user = None
         for line in output:
             if re.match('Login successful', line) or re.match('Error: Already logged in', line):
+                logging.debug('Emcli logged in')
                 return True
 
+        logging.debug('Emcli not logged in')
         return False
 
     def logout(self):
         output = self.execute('logout')
         for line in output:
             if re.match('Logout successful', line) or re.match('Error: Already logged out', line):
+                logging.debug('Emcli logged out')
                 self.logged_in = False
 
     def __to_json(self):
@@ -96,6 +103,8 @@ class Emcli:
 
         os.chmod(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, '.secure',
                               '.object.json'), 0o600)
+
+        logging.debug('Emcli object stored to json')
 
     def __from_json(self):
         try:
@@ -155,7 +164,12 @@ class Emcli:
                 if match_object:
                     result.append(match_object.group(1))
 
-            return result if len(result) != 0 else None
+            if len(result) != 0:
+                logging.debug('Event ID found, %s' % ', '.join(result))
+                return result
+            else:
+                logging.debug('Event ID not found')
+                return None
         elif len(args) == 2:
             query = 'SELECT DISTINCT E.EVENT_SEQ_ID FROM SYSMAN.MGMT$EVENTS E WHERE INCIDENT_ID = HEXTORAW (\'%s\') AND SEVERITY = \'%s\'' % (
                 args[0], args[1])
@@ -166,7 +180,13 @@ class Emcli:
                 if match_object:
                     result.append(match_object.group(1))
 
-            return result if len(result) != 0 else None
+            if len(result) != 0:
+                logging.debug('Event ID found, %s' % ', '.join(result))
+                return result
+            else:
+                logging.debug('Event ID not found')
+                return None
+
         return None
 
     def check_message_sent(self, *args):
@@ -182,8 +202,9 @@ class Emcli:
             match_object = re.search('(\d+)', line)
             if match_object:
                 if match_object.group(1) != '0':
+                    logging.debug('Message for ID %s found' % ', '.join(args))
                     return True
-
+        logging.debug('Message for ID %s not found' % ', '.join(args))
         return False
 
     def __del__(self):

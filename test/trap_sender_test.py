@@ -2,8 +2,10 @@
 # coding=utf-8
 
 import logging
+from logging.handlers import TimedRotatingFileHandler
 import sys
 import os
+
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, 'lib'))
 
 from trap_sender import *
@@ -11,9 +13,16 @@ from trap_sender import *
 
 def main():
     # Основная процедура
-    log_filename = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, 'log', 'test.log')
-    logging.basicConfig(filename=log_filename, level=logging.INFO,
-                        format="%(asctime)s - %(process)d - %(levelname)s - %(message)s")
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+    handler = TimedRotatingFileHandler(
+        os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, 'log', 'test.log'),
+        when="D",
+        interval=1)
+
+    formatter = logging.Formatter("%(asctime)s - %(process)d - %(levelname)s - %(message)s")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
 
     environment_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'environment.json')
 

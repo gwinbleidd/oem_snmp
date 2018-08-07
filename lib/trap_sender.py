@@ -34,6 +34,7 @@ def filter_trap(**kwargs):
                     regexp = re.compile(value.encode('ascii'))
                     match_object = regexp.search(kwargs[filter_key])
                     if match_object:
+                        logging.debug('Matched filter expression %s' % value.encode('ascii'))
                         return True
 
     return False
@@ -74,6 +75,7 @@ def send_trap(environment):
                  'oraEMNGEventSequenceId': 'null'}
 
     if 'ISSUE_TYPE' not in environment:
+        logging.fatal('ISSUE_TYPE not set')
         raise Exception('ISSUE_TYPE not set')
 
     for trap_variable, os_variable in trap_to_environment_variables.iteritems():
@@ -94,12 +96,14 @@ def send_trap(environment):
     # Во-вторых, для инцидентов и проблем не передается в переменную SequenceID
     # Будем брать его из SequenceID породившего события
     if oms_event['oraEMNGIssueType'] in ('2', '3'):
+        logging.debug('Message is incident or problem')
         oms_event.update(
             {'oraEMNGEventIssueId': re.search('&issueID=([ABCDEF|0-9]{32})$',
                                               environment['MESSAGE_URL']).group(1)})
 
         emcli = Emcli()
         event_id = emcli.get_event_id(oms_event['oraEMNGEventIssueId'])
+        logging.debug('Got event ID from OEM %s' % ', '.join(event_id))
         if event_id is not None and len(event_id) != 0:
             oms_event.update({'oraEMNGEventSequenceId': event_id[0]})
         else:
@@ -113,26 +117,37 @@ def send_trap(environment):
 
         # Подождем 2 секунды, возможно сообщение по событию запаздывает
         if not message_sent:
+            logging.debug('Message from OEM not sent')
             time.sleep(2)
             message_sent = emcli.check_message_sent(oms_event['oraEMNGEventIssueId'],
                                                     oms_event['oraEMNGEventSeverity'])
 
         if message_sent:
+            logging.debug('Message from OEM sent, skipping')
             do_not_send_trap = True
             # Если пришел Acknowledged, трап посылаем с ID породившего события
             if oms_event['oraEMNGAssocIncidentAcked'] == 'Yes':
+                logging.debug('... But it is an Acknowledge message, sending')
                 do_not_send_trap = False
 
         # Если пришла закрывашка, а само событие закрылось без отправки сообщения,
         # нужно отправить трап, подменив SequenceID на аналогичный параметр события
-        if oms_event['oraEMNGEventSeverity'] == 'Clear' and not message_sent:
+        if oms_event['oraEMNGEventSeverity'] == 'Clear':
+            logging.debug('Clear message came')
             do_not_send_trap = False
 
     # Проверяем, нет ли случайно в Заббиксе события с таким же текстом
     # отображаемого на экране дежурных
     # Если есть - отсылать его не нужно
     try:
-        do_not_send_trap = True if check_if_message_exists('%s: %s' % (oms_event['oraEMNGEventTargetName'], oms_event['oraEMNGEventMessage'])) else do_not_send_trap
+        if check_if_message_exists(
+                '%s: %s' % (oms_event['oraEMNGEventTargetName'], oms_event['oraEMNGEventMessage'])) and not (
+                oms_event['oraEMNGEventSeverity'] == 'Clear' or oms_event['oraEMNGAssocIncidentAcked'] == 'Yes'):
+            logging.debug('Message exists in Zabbix, skipping')
+            do_not_send_trap = True
+        else:
+            logging.debug('Message do not exists in Zabbix')
+            do_not_send_trap = do_not_send_trap
     except Exception as e:
         log_event(oms_event_to_log=oms_event)
         raise e
@@ -143,12 +158,14 @@ def send_trap(environment):
         # Если да - отсылать не будем
         if not filter_trap(message=environment['MESSAGE'] if 'MESSAGE' in environment else None,
                            event_name=environment['EVENT_NAME'] if 'EVENT_NAME' in environment else None):
-
+            logging.debug('Message not filtered')
             # Для начала закроем событие в заббиксе с таким же ИД
             # если таковой имеется
             # но не трогаем закрывашки
             try:
-                if not oms_event['oraEMNGEventSeverity'] == 'Clear' and not oms_event['oraEMNGAssocIncidentAcked'] == 'Yes':
+                if not oms_event['oraEMNGEventSeverity'] == 'Clear' and not oms_event[
+                                                                                'oraEMNGAssocIncidentAcked'] == 'Yes':
+                    logging.debug('Trying to acknowledge event in Zabbix')
                     acknowledge_event_by_id(oms_event['oraEMNGEventSequenceId'])
             except Exception as e:
                 log_event(oms_event_to_log=oms_event)
@@ -176,6 +193,7 @@ def send_trap(environment):
 
             # Посылаем трап
             try:
+                logging.debug('Trying to send SNMP trap')
                 error_indication, error_status, error_index, var_binds = next(
                     sendNotification(
                         SnmpEngine(),
@@ -190,10 +208,12 @@ def send_trap(environment):
                 )
 
                 if error_indication:
+                    logging.debug('SNMP exception')
                     oms_event.update({'TrapState': 'exception'})
                     log_event(oms_event_to_log=oms_event)
                     raise Exception(error_indication)
                 else:
+                    logging.debug('SNMP sent')
                     oms_event.update({'TrapState': 'send snmp'})
             except Exception as e:
                 log_event(oms_event_to_log=oms_event)
@@ -310,8 +330,10 @@ def send_trap(environment):
                 if os.path.getsize(lock_file) == 0:
                     os.remove(lock_file)
         else:
+            logging.debug('Event filtered')
             oms_event.update({'TrapState': 'filtered'})
     else:
+        logging.debug('Event skipped')
         oms_event.update({'TrapState': 'skipped'})
 
     log_event(oms_event_to_log=oms_event)
