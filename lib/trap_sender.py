@@ -91,7 +91,8 @@ def send_trap(environment):
     # Во-первых, подрезаем длину сообщения и URL события до 255 символов, чтобы влезало в трап
     oms_event.update({'oraEMNGEventMessage': oms_event['oraEMNGEventMessage'][:255],
                       'oraEMNGEventMessageURL': oms_event['oraEMNGEventMessageURL'][:255],
-                      'oraEMNGEventContextAttrs': oms_event['oraEMNGEventContextAttrs'][:255]})
+                      'oraEMNGEventContextAttrs': oms_event['oraEMNGEventContextAttrs'][:255],
+                      'oraEMNGEventTargetName': oms_event['oraEMNGEventTargetName'].replace('.severstal.severstalgroup.com', '')})
 
     # Во-вторых, для инцидентов и проблем не передается в переменную SequenceID
     # Будем брать его из SequenceID породившего события
