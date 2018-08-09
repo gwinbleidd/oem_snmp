@@ -6,18 +6,37 @@ import logging
 from pyzabbix import ZabbixAPI
 
 
-def acknowledge_event_by_id(event_id):
-    logging.debug('Trying to acknowledge event in Zabbix by ID')
-    result = list()
+def get_config():
     config_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, '.secure', '.zabbix.json')
     with open(config_file, 'r') as json_file:
-        config = json.load(json_file)
+        return json.load(json_file)
 
+
+def get_zabbix():
     logging.debug('Connecting to Zabbix')
-    zabbix_api = ZabbixAPI(url=config['server'], user=config['name'], password=config['password'])
+    config = get_config()
+
+    return ZabbixAPI(url=config['server'], user=config['name'], password=config['password'])
+
+
+def get_event_by_id(event_id):
+    logging.debug('Trying to get event in Zabbix by ID')
+
+    zabbix_api = get_zabbix()
     request = zabbix_api.event.get(output='eventid', value=1, acknowledged=False,
                                    tags=[{'tag': 'ID', 'value': event_id}])
     logging.debug('Found some events in Zabbix')
+
+    return request
+
+
+def acknowledge_event_by_id(event_id):
+    logging.debug('Trying to get event in Zabbix by ID')
+
+    result = list()
+    request = get_event_by_id(event_id)
+    zabbix_api = get_zabbix()
+    config = get_config()
 
     for event in request:
         ack_request = zabbix_api.event.acknowledge(eventids=event['eventid'], message=config['message'],
@@ -30,18 +49,31 @@ def acknowledge_event_by_id(event_id):
 
 def check_if_message_exists(message):
     logging.debug('Trying to check if message exists in Zabbix')
-    config_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, '.secure', '.zabbix.json')
-    with open(config_file, 'r') as json_file:
-        config = json.load(json_file)
 
-    logging.debug('Connecting to Zabbix')
-    zabbix_api = ZabbixAPI(url=config['server'], user=config['name'], password=config['password'])
-    request = zabbix_api.trigger.get(extendoutput=True, expandData=1, expandDescription=1, withUnacknowledgedEvents=1,
-                                     only_true=1)
+    zabbix_api = get_zabbix()
+    events = zabbix_api.event.get(value=1, acknowledged=False, groupids='157')
+    if len(events) != 0:
+        items = zabbix_api.item.get(extendoutput=True, selectTriggers='extend', selectHosts='extend', groupids='157')
+        for item in items:
+            if len(item['triggers']) != 0:
+                for event in events:
+                    object_id = event['objectid']
+                    clock = event['clock']
+                    for trigger in item['triggers']:
+                        if trigger['triggerid'] == object_id:
+                            item_id = item['itemid']
+                            history_items = zabbix_api.history.get(extendOutput=True, history=4, itemids=item_id,
+                                                               filter={'clock': clock})
+                            for history_item in history_items:
+                                # if history_item['clock'].encode('ascii') == clock:
+                                # print json.dumps(history_item, indent=3)
+                                if message.encode('ascii') == history_item['value'].encode('utf-8'):
+                                    logging.debug('Trigger found in Zabbix')
+                                    return True
 
-    if message.encode('ascii') in [trigger['description'].encode('utf-8') for trigger in request]:
-        logging.debug('Trigger found in Zabbix')
-        return True
     else:
         logging.debug('Trigger not found in Zabbix')
         return False
+
+    logging.debug('Trigger not found in Zabbix')
+    return False

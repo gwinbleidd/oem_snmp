@@ -92,7 +92,8 @@ def send_trap(environment):
     oms_event.update({'oraEMNGEventMessage': oms_event['oraEMNGEventMessage'][:255],
                       'oraEMNGEventMessageURL': oms_event['oraEMNGEventMessageURL'][:255],
                       'oraEMNGEventContextAttrs': oms_event['oraEMNGEventContextAttrs'][:255],
-                      'oraEMNGEventTargetName': oms_event['oraEMNGEventTargetName'].replace('.severstal.severstalgroup.com', '')})
+                      'oraEMNGEventTargetName': oms_event['oraEMNGEventTargetName'].replace(
+                          '.severstal.severstalgroup.com', '')})
 
     # Во-вторых, для инцидентов и проблем не передается в переменную SequenceID
     # Будем брать его из SequenceID породившего события
@@ -137,12 +138,41 @@ def send_trap(environment):
             logging.debug('Clear message came')
             do_not_send_trap = False
 
+    # Проверяем, если пришла закрывашка, а открывающего события в Заббиксе нет, отправлять не будем
+    try:
+        if oms_event['oraEMNGEventSeverity'] == 'Clear' or oms_event['oraEMNGAssocIncidentAcked'] == 'Yes':
+            request = get_event_by_id(oms_event['oraEMNGEventSequenceId'])
+            if request is None or len(request) == 0:
+                do_not_send_trap = True
+        else:
+            logging.debug('Opening message exists in Zabbix')
+            do_not_send_trap = do_not_send_trap
+    except Exception as e:
+        log_event(oms_event_to_log=oms_event)
+        raise e
+
+    # Проверяем, если пришла закрывашка, будем закрывать через API, не будем отправлять
+    try:
+        if oms_event['oraEMNGEventSeverity'] == 'Clear' or oms_event['oraEMNGAssocIncidentAcked'] == 'Yes':
+            logging.debug('Trying to acknowledge event to close it by API method')
+            acknowledge_event_by_id(oms_event['oraEMNGEventSequenceId'])
+            if 'TrapState' not in oms_event:
+                oms_event.update({'TrapState': 'closed by api'})
+            do_not_send_trap = True
+    except Exception as e:
+        log_event(oms_event_to_log=oms_event)
+        raise e
+
     # Проверяем, нет ли случайно в Заббиксе события с таким же текстом
-    # отображаемого на экране дежурных
+    # отображаемого на экране
     # Если есть - отсылать его не нужно
     try:
         if check_if_message_exists(
-                '%s: %s' % (oms_event['oraEMNGEventTargetName'], oms_event['oraEMNGEventMessage'])) and not (
+                '%s %s %s: %s Acknowledge=%s' % (oms_event['oraEMNGEventSequenceId'],
+                                                 oms_event['oraEMNGEventSeverity'],
+                                                 oms_event['oraEMNGEventTargetName'],
+                                                 oms_event['oraEMNGEventMessage'],
+                                                 oms_event['oraEMNGAssocIncidentAcked'])) and not (
                 oms_event['oraEMNGEventSeverity'] == 'Clear' or oms_event['oraEMNGAssocIncidentAcked'] == 'Yes'):
             logging.debug('Message exists in Zabbix, skipping')
             do_not_send_trap = True
@@ -332,10 +362,12 @@ def send_trap(environment):
                     os.remove(lock_file)
         else:
             logging.debug('Event filtered')
-            oms_event.update({'TrapState': 'filtered'})
+            if 'TrapState' not in oms_event:
+                oms_event.update({'TrapState': 'filtered'})
     else:
         logging.debug('Event skipped')
-        oms_event.update({'TrapState': 'skipped'})
+        if 'TrapState' not in oms_event:
+            oms_event.update({'TrapState': 'skipped'})
 
     log_event(oms_event_to_log=oms_event)
 
