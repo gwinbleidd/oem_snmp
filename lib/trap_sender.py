@@ -155,10 +155,13 @@ def send_trap(environment):
     try:
         if oms_event['oraEMNGEventSeverity'] == 'Clear' or oms_event['oraEMNGAssocIncidentAcked'] == 'Yes':
             logging.debug('Trying to acknowledge event to close it by API method')
-            acknowledge_event_by_id(oms_event['oraEMNGEventSequenceId'])
-            if 'TrapState' not in oms_event:
-                oms_event.update({'TrapState': 'closed by api'})
-            do_not_send_trap = True
+            result = acknowledge_event_by_id(oms_event['oraEMNGEventSequenceId'])
+            if result is not None and len(result) != 0:
+                if 'TrapState' not in oms_event:
+                    oms_event.update({'TrapState': 'closed by api'})
+                do_not_send_trap = True
+            else:
+                do_not_send_trap = do_not_send_trap
     except Exception as e:
         log_event(oms_event_to_log=oms_event)
         raise e
