@@ -105,10 +105,11 @@ def send_trap(environment):
 
         emcli = Emcli()
         event_id = emcli.get_event_id(oms_event['oraEMNGEventIssueId'])
-        logging.debug('Got event ID from OEM %s' % ', '.join(event_id))
         if event_id is not None and len(event_id) != 0:
+            logging.debug('Got event ID from OEM %s' % ', '.join(event_id))
             oms_event.update({'oraEMNGEventSequenceId': event_id[0]})
         else:
+            logging.debug('Event ID not found in OEM')
             oms_event.update({'oraEMNGEventSequenceId': oms_event['oraEMNGEventIssueId']})
 
         # В-третьих, нужно проверить, есть ли событие с таким же уровнем severity

@@ -23,8 +23,7 @@ def get_event_by_id(event_id):
     logging.debug('Trying to get event in Zabbix by ID')
 
     zabbix_api = get_zabbix()
-    request = zabbix_api.event.get(output='eventid', value=1, acknowledged=False,
-                                   tags=[{'tag': 'ID', 'value': event_id}])
+    request = zabbix_api.event.get(output='eventid', value=1, acknowledged=False, tags=[{'tag': 'ID', 'value': event_id}])
     logging.debug('Found some events in Zabbix')
 
     return request

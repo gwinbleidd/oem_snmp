@@ -7,7 +7,7 @@ import hashlib
 import logging
 
 
-class Emcli:
+class Emcli(object):
     def __init__(self):
         if os.path.isfile(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, '.secure',
                                        '.object.json')):
