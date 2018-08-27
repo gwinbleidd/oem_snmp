@@ -1,6 +1,9 @@
 .idea
 .secure/*
+!.secure/*.json.example
 log/*
 */*.pyc
 test/environment.json
 venv
+config/*.json
+!config/*.json.example

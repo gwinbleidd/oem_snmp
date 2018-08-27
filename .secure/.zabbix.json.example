@@ -1,0 +1,7 @@
+{
+  "name": "test",
+  "password": "test",
+  "server": "https://zabbix.example.com/zabbix",
+  "message": "Closed by script",
+  "action": 1
+}
