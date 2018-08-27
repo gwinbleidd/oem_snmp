@@ -18,26 +18,24 @@ def main():
     try:
         zabbix_api = ZabbixAPI(url=config['server'], user=config['name'], password=config['password'])
 
-        request = zabbix_api.event.get(output='eventid', value=1, acknowledged=False,
-                                       tags=[{'tag': 'ID', 'value': '72C65E6861CD4F7FE0534539780ACC89'}])
+        # request = zabbix_api.problem.get(tags=[{'tag': 'ID', 'value': '73015FCFD884E579E0534539780AADC3'}])
 
-        # events = zabbix_api.event.get(value=1, acknowledged=False, groupids='157')
-        # if len(events) != 0:
-        #     items = zabbix_api.item.get(extendoutput=True, selectTriggers='extend', selectHosts='extend',
-        #                                 groupids='157')
-        #     for item in items:
-        #         if len(item['triggers']) != 0:
-        #             for event in events:
-        #                 object_id = event['objectid']
-        #                 clock = event['clock']
-        #                 for trigger in item['triggers']:
-        #                     if trigger['triggerid'] == object_id:
-        #                         item_id = item['itemid']
-        #                         history_items = zabbix_api.history.get(extendOutput=True, history=4, itemids=item_id,
-        #                                                                filter={'clock': clock})
-        #                         for history_item in history_items:
-        #                             # if history_item['clock'].encode('ascii') == clock:
-        #                             print json.dumps(history_item, indent=3)
+        events = zabbix_api.problem.get(groupids='157')
+        if len(events) != 0:
+            items = zabbix_api.item.get(extendoutput=True, selectTriggers='extend', selectHosts='extend',
+                                        groupids='157')
+            for item in items:
+                if len(item['triggers']) != 0:
+                    for event in events:
+                        object_id = event['objectid']
+                        clock = event['clock']
+                        for trigger in item['triggers']:
+                            if trigger['triggerid'] == object_id:
+                                item_id = item['itemid']
+                                history_items = zabbix_api.history.get(extendOutput=True, history=4, itemids=item_id,
+                                                                       filter={'clock': clock})
+                                for history_item in history_items:
+                                    print json.dumps(history_item, indent=3)
         # request = zabbix_api.trigger.get(extendOutput=True, expandDescription=1, triggerids=228628, lastChangeSince=1533809664)
         # request = zabbix_api.history.get(extendOutput=True, history=4, itemids='418930')
         # request = zabbix_api.trigger.get(extendOutput=True, expandData=1, expandDescription=1, expandExpression=1, skipDependent=1,
@@ -45,7 +43,7 @@ def main():
         #                                  output=['triggerid',
         #                                          'description',
         #                                          'priority'])
-        print json.dumps(request, indent=3)
+        # print json.dumps(events, indent=3)
     except Exception as e:
         logging.error(e, exc_info=True)
 

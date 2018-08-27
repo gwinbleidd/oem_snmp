@@ -23,7 +23,7 @@ def get_event_by_id(event_id):
     logging.debug('Trying to get event in Zabbix by ID')
 
     zabbix_api = get_zabbix()
-    request = zabbix_api.event.get(output='eventid', value=1, acknowledged=False, tags=[{'tag': 'ID', 'value': event_id}])
+    request = zabbix_api.problem.get(output='eventid', tags=[{'tag': 'ID', 'value': event_id}])
     logging.debug('Found some events in Zabbix')
 
     return request
@@ -34,9 +34,9 @@ def acknowledge_event_by_id(event_id):
 
     result = list()
     request = get_event_by_id(event_id)
+
     zabbix_api = get_zabbix()
     config = get_config()
-
     for event in request:
         ack_request = zabbix_api.event.acknowledge(eventids=event['eventid'], message=config['message'],
                                                    action=config['action'])
@@ -50,7 +50,7 @@ def check_if_message_exists(message):
     logging.debug('Trying to check if message exists in Zabbix')
 
     zabbix_api = get_zabbix()
-    events = zabbix_api.event.get(value=1, acknowledged=False, groupids='157')
+    events = zabbix_api.problem.get(groupids='157')
     if len(events) != 0:
         items = zabbix_api.item.get(extendoutput=True, selectTriggers='extend', selectHosts='extend', groupids='157')
         for item in items:
@@ -62,11 +62,9 @@ def check_if_message_exists(message):
                         if trigger['triggerid'] == object_id:
                             item_id = item['itemid']
                             history_items = zabbix_api.history.get(extendOutput=True, history=4, itemids=item_id,
-                                                               filter={'clock': clock})
+                                                                   filter={'clock': clock})
                             for history_item in history_items:
-                                # if history_item['clock'].encode('ascii') == clock:
-                                # print json.dumps(history_item, indent=3)
-                                if message.encode('ascii') == history_item['value'].encode('utf-8'):
+                                if message.encode('utf-8')[33:] == history_item['value'].encode('utf-8')[33:]:
                                     logging.debug('Trigger found in Zabbix')
                                     return True
 
