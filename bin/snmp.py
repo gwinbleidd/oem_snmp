@@ -6,7 +6,7 @@ import logging
 import time
 from logging.handlers import TimedRotatingFileHandler
 
-
+# Импортируем все, что понаписали в папке lib
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, 'lib'))
 
 from trap_sender import send_trap
@@ -14,21 +14,25 @@ from trap_sender import send_trap
 
 def main():
     # Основная процедура
+    # Определяем логгер
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
+    # попытка определить хэндлер с ротацией логов по времени, но не сработало так как задумывалось
     handler = TimedRotatingFileHandler(
         os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, 'log', 'application.log'),
         when="D",
         interval=1)
-
+    # определяем формат записи в лог
     formatter = logging.Formatter("%(asctime)s - %(process)d - %(levelname)s - %(message)s")
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
+    # загружаем переменные окружения. ОЕМ при вызове скрипта передает через них параметры события,
+    # из-за которого этот вызов происходит
     environment = dict(os.environ)
     try:
         # Вызываем отправку трапа
-        # Должен вернуть ИД события, чтобы показать его в ОЕМе
+        # Должен вернуть ИД события и его статус, чтобы показать его в ОЕМе
         sequence_id = send_trap(environment)
         logging.info(sequence_id)
         print sequence_id
