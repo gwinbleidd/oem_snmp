@@ -46,6 +46,12 @@ def send_trap(environment):
     do_not_send_trap = False
 
     # Загружаем конфиг
+    # в конфиге должны быть 4 секции:
+    # 1. trap_to_environment_variables - маппинг переменных трапа в переменные окружения
+    # 2. trap_parameters - параметры трапа, которые будут отправлены
+    # 3. hostname - имя хоста ОЕМ
+    # 4. zabbix - параметры хоста самого Заббикса или одного из его прокси,
+    #    к которому подключены все(!) хосты, которые мониторятся в ОЕМ
     with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, 'config',
                            'snmp.json'), 'r') as json_file:
         config = json.load(json_file)
@@ -63,7 +69,6 @@ def send_trap(environment):
     # Все поля трапа OEM, которые мы будем передавать, получены из MIBа omstrap.v1
     trap_parameters = config['trap_parameters']
 
-    # Имя хоста ОЕМ
     hostname = config['hostname']
     zabbix = config['zabbix']
 
@@ -73,10 +78,6 @@ def send_trap(environment):
 
     oms_event = {'oraEMNGEnvironment': environment,
                  'oraEMNGEventSequenceId': 'null'}
-
-    if 'ISSUE_TYPE' not in environment:
-        logging.fatal('ISSUE_TYPE not set')
-        raise Exception('ISSUE_TYPE not set')
 
     for trap_variable, os_variable in trap_to_environment_variables.iteritems():
         if type(os_variable) is unicode:

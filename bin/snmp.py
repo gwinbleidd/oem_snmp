@@ -18,6 +18,19 @@ def main():
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     # попытка определить хэндлер с ротацией логов по времени, но не сработало так как задумывалось
+    # поэтому был настроен logrotate примерно следующего содержания:
+    # <путь к папке установки скрипта>/log/application.log    {
+    #     rotate 3
+    #     missingok
+    #     notifempty
+    #     compress
+    #     daily
+    #     create 0640
+    #     postrotate
+    #         tar -zcf <путь к папке установки скрипта>/log/backup/logs_`date + "%Y%m%d"`.tar.gz\
+    #           $(find <путь к папке установки скрипта>/log/*.json -type f -mtime -1 -daystart) --remove-files
+    #     endscript
+    # }
     handler = TimedRotatingFileHandler(
         os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, 'log', 'application.log'),
         when="D",
