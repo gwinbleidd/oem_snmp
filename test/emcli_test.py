@@ -19,7 +19,7 @@ def main():
     try:
         emcli = Emcli()
         print emcli.get_event_id('71E4097171ECBA19E0534539780ACF99')
-        logging.info('Tiem spent: %s' % str(datetime.datetime.now() - start))
+        logging.info('Time spent: %s' % str(datetime.datetime.now() - start))
     except Exception as e:
         logging.error(e, exc_info=True)
 
