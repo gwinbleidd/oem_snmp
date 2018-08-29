@@ -2,6 +2,7 @@
 # coding=utf-8
 import os
 import sys
+import getopt
 import logging
 import time
 import json
@@ -10,10 +11,35 @@ from logging.handlers import TimedRotatingFileHandler
 # Импортируем все, что понаписали в папке lib
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, 'lib'))
 
-from trap_sender import send_trap
+from trap_sender import send_trap_for_oem13, send_trap_for_oem11
 
 
-def main():
+def usage():
+    print 'Usage: snmp.py -v [11|13]'
+    sys.exit(2)
+
+
+def main(argv):
+    # Парсим параметры вызова
+    # Должен быть обязательно указан параметр -v с номером
+    # версии ОЕМ(11 для 11g, 13 - для 13c), для которой вызывается скрипт
+    version = ''
+    try:
+        opts, args = getopt.getopt(argv, "hv:")
+
+        for opt, arg in opts:
+            if opt == '-h':
+                print 'snmp.py -v [11|13]'
+                sys.exit()
+            elif opt == '-v':
+                if arg in ('11', '13'):
+                    version = arg
+                else:
+                    usage()
+            else:
+                usage()
+    except getopt.GetoptError:
+        usage()
     # Основная процедура
     # Определяем логгер
     logger = logging.getLogger()
@@ -44,16 +70,27 @@ def main():
     # загружаем переменные окружения. ОЕМ при вызове скрипта передает через них параметры события,
     # из-за которого этот вызов происходит
     environment = dict(os.environ)
-    try:
-        # Вызываем отправку трапа
-        # Должен вернуть ИД события и его статус, чтобы показать его в ОЕМе
-        sequence_id = send_trap(environment)
-        logging.info(sequence_id)
-        print sequence_id
-    except Exception as e:
-        logging.info(json.dumps(environment, indent=3, sort_keys=True))
-        logging.error(e, exc_info=True)
+    if version == '13':
+        try:
+            # Вызываем отправку трапа
+            # Должен вернуть ИД события и его статус, чтобы показать его в ОЕМе
+            sequence_id = send_trap_for_oem13(environment)
+            logging.info(sequence_id)
+            print sequence_id
+        except Exception as e:
+            logging.info(json.dumps(environment, indent=3, sort_keys=True))
+            logging.error(e, exc_info=True)
+    elif version == '11':
+        try:
+            # Вызываем отправку трапа
+            # Должен вернуть ИД события и его статус, чтобы показать его в ОЕМе
+            sequence_id = send_trap_for_oem11(environment)
+            logging.info(sequence_id)
+            print sequence_id
+        except Exception as e:
+            logging.info(json.dumps(environment, indent=3, sort_keys=True))
+            logging.error(e, exc_info=True)
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])
