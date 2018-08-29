@@ -24,13 +24,13 @@ def main():
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
-    environment_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'environment.json')
+    environment_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'environment11.json')
 
     with open(environment_file, 'r') as json_file:
         environment = json.load(json_file)
 
     try:
-        sequence_id = send_trap(environment)
+        sequence_id = send_trap_for_oem11(environment)
         logging.info(sequence_id)
         print sequence_id
     except Exception as e:

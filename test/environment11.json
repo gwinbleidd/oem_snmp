@@ -1,0 +1,21 @@
+{
+  "ACKNOWLEDGED": "0",
+  "ACKNOWLEDGED_BY": "",
+  "CYCLE_GUID": "7486340C0ABE875CE050780A832C1EEF",
+  "HOST": "oem01.severstal.severstalgroup.com",
+  "KEY_VALUE": "",
+  "KEY_VALUE_NAME": "",
+  "MESSAGE": "Listener response to a TNS ping is 560 msecs",
+  "METRIC": "Response Time (msec)",
+  "METRIC_VALUE": "560",
+  "NOTIF_TYPE": "1",
+  "REPEAT_COUNT": "0",
+  "RULE_NAME": "Listener Availability",
+  "RULE_OWNER": "SYSMAN",
+  "SEVERITY": "Warning",
+  "TARGET_NAME": "LISTENER_oem01.severstal.severstalgroup.com",
+  "TARGET_TYPE": "Listener",
+  "TIMESTAMP": "29.08.2018 14:25:22 GMT+04:00",
+  "VIOLATION_CONTEXT": "",
+  "VIOLATION_GUID": "7486340C0ABE875CE050780A832C1EEF"
+}
