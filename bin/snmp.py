@@ -4,6 +4,7 @@ import os
 import sys
 import logging
 import time
+import json
 from logging.handlers import TimedRotatingFileHandler
 
 # Импортируем все, что понаписали в папке lib
@@ -50,6 +51,7 @@ def main():
         logging.info(sequence_id)
         print sequence_id
     except Exception as e:
+        logging.info(json.dumps(environment, indent=3, sort_keys=True))
         logging.error(e, exc_info=True)
 
 
