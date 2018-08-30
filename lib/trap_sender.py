@@ -276,6 +276,22 @@ def send_trap_for_oem11(environment):
         log_event(oms_event_to_log=oms_event)
         raise e
 
+    # Проверяем, если пришла закрывашка, будем закрывать через API, не будем отправлять
+    try:
+        if oms_event['oraEMNGEventSeverity'] == 'Clear' or oms_event['oraEMNGAssocIncidentAcked'] == 'Yes':
+            logging.debug('Trying to acknowledge event to close it by API method')
+            result = acknowledge_event_by_id(oms_event['oraEMNGEventSequenceId'])
+            if result is not None and len(result) != 0:
+                if 'TrapState' not in oms_event:
+                    oms_event.update({'TrapState': 'closed by api'})
+                do_not_send_trap = True
+                reason = 'closed by API'
+            else:
+                do_not_send_trap = do_not_send_trap
+    except Exception as e:
+        log_event(oms_event_to_log=oms_event)
+        raise e
+
     # Проверяем, нет ли случайно в Заббиксе события с таким же текстом
     # отображаемого на экране
     # Если есть - отсылать его не нужно
