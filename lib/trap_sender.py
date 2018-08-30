@@ -46,7 +46,7 @@ def send_zabbix_trap(oms_event):
 
     for trap_variable in trap_parameters:
         if trap_variable in oms_event:
-            trap_variables.update({trap_variable.encode('ascii'): oms_event[trap_variable].encode('ascii')})
+            trap_variables.update({trap_variable: oms_event[trap_variable]})
 
     # Формируем метрику
     try:

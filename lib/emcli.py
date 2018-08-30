@@ -2,6 +2,7 @@
 
 import subprocess
 import os
+import sys
 import json
 import re
 import datetime
@@ -62,6 +63,7 @@ class Emcli(object):
         # в начало списка добавляем бинарник emcli...
         params.insert(0, self.config['bin'].encode('ascii'))
         # ...и подсовываем это все subprocess для выполнения
+        params = [arg.encode(sys.getfilesystemencoding()) for arg in params]
         process = subprocess.Popen(params, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         # возвращаем то, что нагенерил subprocess
         return process.stdout.readlines()
