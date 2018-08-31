@@ -101,7 +101,7 @@ def check_if_message_exists(message):
                             for history_item in history_items:
                                 # в цикле бежим по истории
                                 # если у исторического элемента сообщение совпадает с требуемым - возвращаем True
-                                if message.encode('utf-8')[33:] == history_item['value'].encode('utf-8')[33:]:
+                                if message.encode('utf-8') in history_item['value'].encode('utf-8'):
                                     logging.debug('Trigger found in Zabbix')
                                     return True
 

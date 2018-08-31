@@ -250,7 +250,8 @@ def send_trap_for_oem11(environment):
                  'oraEMNGEventSequenceId': 'null'}
 
     for trap_variable, os_variable in trap_to_environment_variables.iteritems():
-        oms_event.update({trap_variable: environment[os_variable] if os_variable in environment else ''})
+        oms_event.update(
+            {trap_variable: environment[os_variable].encode('utf-8') if os_variable in environment else ''})
 
     # Нужно подправить некоторые элементы
     # Во-первых:
@@ -296,12 +297,8 @@ def send_trap_for_oem11(environment):
     # отображаемого на экране
     # Если есть - отсылать его не нужно
     try:
-        if check_if_message_exists(
-                '%s %s %s: %s Acknowledge=%s' % (oms_event['oraEMNGEventSequenceId'],
-                                                 oms_event['oraEMNGEventSeverity'],
-                                                 oms_event['oraEMNGEventTargetName'],
-                                                 oms_event['oraEMNGEventMessage'],
-                                                 oms_event['oraEMNGAssocIncidentAcked'])) and not (
+        message = '%s: %s' % (oms_event['oraEMNGEventTargetName'], oms_event['oraEMNGEventMessage'])
+        if check_if_message_exists(message) and not (
                 oms_event['oraEMNGEventSeverity'] == 'Clear' or oms_event['oraEMNGAssocIncidentAcked'] == 'Yes'):
             logging.debug('Message exists in Zabbix, skipping')
             do_not_send_trap = True
@@ -379,12 +376,14 @@ def send_trap_for_oem13(environment):
 
     for trap_variable, os_variable in trap_to_environment_variables.iteritems():
         if type(os_variable) is unicode:
-            oms_event.update({trap_variable: environment[os_variable] if os_variable in environment else ''})
+            oms_event.update(
+                {trap_variable: environment[os_variable].encode('utf-8') if os_variable in environment else ''})
         elif type(os_variable) is dict:
             issue_type = environment['ISSUE_TYPE']
-            oms_event.update({trap_variable: environment[os_variable[issue_type]] if (issue_type in os_variable and
-                                                                                      os_variable[
-                                                                                          issue_type] in environment) else ''})
+            oms_event.update(
+                {trap_variable: environment[os_variable[issue_type]].encode('utf-8') if (issue_type in os_variable and
+                                                                                         os_variable[
+                                                                                             issue_type] in environment) else ''})
 
     # Нужно подправить некоторые элементы
     # Во-первых:
@@ -476,12 +475,8 @@ def send_trap_for_oem13(environment):
     # отображаемого на экране
     # Если есть - отсылать его не нужно
     try:
-        if check_if_message_exists(
-                '%s %s %s: %s Acknowledge=%s' % (oms_event['oraEMNGEventSequenceId'],
-                                                 oms_event['oraEMNGEventSeverity'],
-                                                 oms_event['oraEMNGEventTargetName'],
-                                                 oms_event['oraEMNGEventMessage'],
-                                                 oms_event['oraEMNGAssocIncidentAcked'])) and not (
+        message = '%s: %s' % (oms_event['oraEMNGEventTargetName'], oms_event['oraEMNGEventMessage'])
+        if check_if_message_exists(message) and not (
                 oms_event['oraEMNGEventSeverity'] == 'Clear' or oms_event['oraEMNGAssocIncidentAcked'] == 'Yes'):
             logging.debug('Message exists in Zabbix, skipping')
             do_not_send_trap = True
